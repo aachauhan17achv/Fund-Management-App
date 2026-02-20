@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="gu">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ફંડ મેનેજમેન્ટ એન્ડ એકાઉન્ટીંગ સિસ્ટમ</title>
+    
+    <!-- React & ReactDOM -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    
+    <!-- Tailwind CSS for Styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- SheetJS for Excel Export (Offline ready if cached) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Google Fonts: Hind Vadodara -->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Hind+Vadodara:wght@300;400;500;600;700&display=swap');
+        body { font-family: 'Hind Vadodara', sans-serif !important; }
+        @keyframes shimmer { 100% { transform: translateX(100%); } }
+        .custom-scrollbar::-webkit-scrollbar { height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    </style>
+</head>
+<body class="bg-[#f4f7f9]">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        // Use React hooks directly
+        const { useState, useMemo, useEffect } = React;
+
+        // Custom SVG Icons (Fallback since Lucide React wrapper isn't used directly in UMD)
+        const Icons = {
+            Landmark: () => <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="3" y1="22" x2="21" y2="22"></line><line x1="6" y1="18" x2="6" y2="11"></line><line x1="10" y1="18" x2="10" y2="11"></line><line x1="14" y1="18" x2="14" y2="11"></line><line x1="18" y1="18" x2="18" y2="11"></line><polygon points="12 2 20 7 4 7"></polygon></svg>,
+            Sparkles: () => <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"></path></svg>,
+            Download: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>,
+            FileSpreadsheet: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><path d="M8 13h2"></path><path d="M8 17h2"></path><path d="M14 13h2"></path><path d="M14 17h2"></path></svg>,
+            LayoutDashboard: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="7" height="9"></rect><rect x="14" y="3" width="7" height="5"></rect><rect x="14" y="12" width="7" height="9"></rect><rect x="3" y="16" width="7" height="5"></rect></svg>,
+            PlusCircle: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="16"></line><line x1="8" y1="12" x2="16" y2="12"></line></svg>,
+            FileText: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>,
+            Book: () => <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>,
+            Wallet: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>,
+            TrendingUp: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"></polyline><polyline points="16 7 22 7 22 13"></polyline></svg>,
+            TrendingDown: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 17 13.5 8.5 8.5 13.5 2 7"></polyline><polyline points="16 17 22 17 22 11"></polyline></svg>,
+            Users: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>,
+            ArrowRightLeft: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="16 3 20 7 16 11"></polyline><line x1="10" y1="7" x2="20" y2="7"></line><polyline points="8 21 4 17 8 13"></polyline><line x1="4" y1="17" x2="14" y2="17"></line></svg>,
+            BookOpen: () => <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path></svg>,
+            CheckCircle2: () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg>,
+            Info: () => <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        };
+
+        // ================= Helper Functions =================
+        const toGujaratiDigits = (numStr) => {
+            if (numStr === null || numStr === undefined) return '';
+            const gujDigits = ['૦', '૧', '૨', '૩', '૪', '૫', '૬', '૭', '૮', '૯'];
+            return numStr.toString().replace(/[0-9]/g, (match) => gujDigits[match]);
+        };
+
+        const formatDate = (dateString) => {
+            if (!dateString) return '';
+            const [year, month, day] = dateString.split('-');
+            return toGujaratiDigits(`${day}-${month}-${year}`);
+        };
+
+        const formatCurrency = (amount) => {
+            if (amount === 0 || !amount) return toGujaratiDigits("0.00");
+            const formatted = new Intl.NumberFormat('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(amount);
+            return toGujaratiDigits(formatted);
+        };
+
+        const formatForJournal = (name) => {
+            if (!name) return '';
+            return name.replace(/\s*ખાતું$/, '');
+        };
+
+        const playSuccessSound = () => {
+            try {
+                const audio = new Audio('Coins Sound Effect.wav');
+                audio.currentTime = 0; 
+                const playPromise = audio.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {}).catch(error => {
+                        console.log("Audio play blocked by browser policies.", error);
+                    });
+                }
+            } catch (e) {
+                console.error("Audio playback failed", e);
+            }
+        };
+
+        const App = () => {
+            const [activeTab, setActiveTab] = useState('entry');
+            const [isExporting, setIsExporting] = useState(false);
+            
+            const initialAccounts = [
+                { name: "SBI સેવીંગ્ઝ બેન્ક ખાતું", type: "Asset", category: "Real" },
+                { name: "SBI ફિક્સ ડિપોઝીટ (FD) ખાતું", type: "Asset", category: "Real" },
+                { name: "રોકડ ખાતું", type: "Asset", category: "Real" },
+                { name: "એકાઉન્ટીંગ ખર્ચ ખાતું", type: "Expense", category: "Nominal" },
+                { name: "પરચુરણ ખર્ચ ખાતું", type: "Expense", category: "Nominal" },
+                { name: "માલ-મિલકત સમારકામ ખાતું", type: "Expense", category: "Nominal" },
+                { name: "સેવીંગ્ઝ બેન્ક વ્યાજ આવક ખાતું", type: "Income", category: "Nominal" },
+                { name: "FD વ્યાજ આવક ખાતું", type: "Income", category: "Nominal" },
+                { name: "SHIVOM FINANCIAL (લેણદાર)", type: "Liability", category: "Personal" }
+            ];
+
+            const [accounts, setAccounts] = useState(initialAccounts);
+            const [transactions, setTransactions] = useState([]);
+            const [entryMode, setEntryMode] = useState('expense_payment'); 
+
+            const [formData, setFormData] = useState({
+                date: new Date().toISOString().split('T')[0],
+                debitAccount: '',
+                creditAccount: '',
+                amount: '',
+                checkNo: '',
+                narration: ''
+            });
+
+            const [newAccountName, setNewAccountName] = useState('');
+            const [newAccountType, setNewAccountType] = useState('Expense');
+
+            useEffect(() => {
+                setFormData(prev => ({ ...prev, debitAccount: '', creditAccount: '', narration: '', checkNo: '' }));
+            }, [entryMode]);
+
+            const handleAddAccount = () => {
+                if (newAccountName.trim() !== '' && !accounts.find(a => a.name === newAccountName.trim())) {
+                let category = 'Real';
+                if (newAccountType === 'Expense' || newAccountType === 'Income') category = 'Nominal';
+                else if (newAccountType === 'Personal_Debtor' || newAccountType === 'Personal_Creditor') category = 'Personal';
+                
+                const type = (newAccountType === 'Personal_Debtor' || newAccountType === 'Asset') ? 'Asset' : 
+                            (newAccountType === 'Personal_Creditor') ? 'Liability' : newAccountType;
+
+                setAccounts([...accounts, { name: newAccountName.trim(), type: type, category: category }]);
+                setNewAccountName('');
+                }
+            };
+
+            const handleAddTransaction = (e) => {
+                e.preventDefault();
+                if (!formData.date || !formData.debitAccount || !formData.creditAccount || !formData.amount) {
+                alert("કૃપા કરીને બધી જરૂરી માહિતી ભરો."); return;
+                }
+                if (formData.debitAccount === formData.creditAccount) {
+                alert("ઉધાર અને જમા ખાતું અલગ હોવું જોઈએ."); return;
+                }
+
+                let finalNarration = formData.narration;
+                if (!finalNarration) {
+                const checkStr = formData.checkNo ? `ચેક નં. ${toGujaratiDigits(formData.checkNo)}` : '';
+                if(entryMode === 'expense_payment') finalNarration = `(બા.જે. ખર્ચ પેટે ${formatForJournal(formData.creditAccount)} દ્વારા ચૂકવ્યા. ${checkStr})`;
+                else if(entryMode === 'income_receipt') finalNarration = `(બા.જે. આવક પેટે રકમ ${formatForJournal(formData.debitAccount)} માં જમા થઈ.)`;
+                else if(entryMode === 'payment_to_person') finalNarration = `(બા.જે. ${formatForJournal(formData.debitAccount)} ને ચૂકવ્યા. ${checkStr})`;
+                else if(entryMode === 'receipt_from_person') finalNarration = `(બા.જે. ${formatForJournal(formData.creditAccount)} પાસેથી રકમ મળી.)`;
+                else if(entryMode === 'contra') finalNarration = `(બા.જે. ${formatForJournal(formData.creditAccount)} માંથી ${formatForJournal(formData.debitAccount)} માં ફંડ ટ્રાન્સફર / રોકાણ કર્યું.)`;
+                else finalNarration = `(બા.જે. વ્યવહાર નોંધ્યો.)`;
+                }
+
+                const newTxn = {
+                id: Date.now(),
+                date: formData.date,
+                debitAccount: formData.debitAccount,
+                creditAccount: formData.creditAccount,
+                amount: parseFloat(formData.amount),
+                checkNo: formData.checkNo,
+                narration: finalNarration
+                };
+
+                setTransactions([...transactions, newTxn]);
+                playSuccessSound();
+                setFormData({ ...formData, amount: '', narration: '', checkNo: '', debitAccount: '', creditAccount: '' });
+            };
+
+            const deleteTransaction = (id) => {
+                setTransactions(transactions.filter(t => t.id !== id));
+            };
+
+            const financialData = useMemo(() => {
+                const ledgers = {};
+                let totalSavings = 0, totalFD = 0, totalIncome = 0;
+
+                accounts.forEach(acc => { ledgers[acc.name] = { type: acc.type, debits: [], credits: [], totalDebit: 0, totalCredit: 0, closingBalance: 0, balanceType: '' }; });
+
+                transactions.forEach(txn => {
+                if (!ledgers[txn.debitAccount]) ledgers[txn.debitAccount] = { debits: [], credits: [], totalDebit: 0, totalCredit: 0 };
+                ledgers[txn.debitAccount].debits.push({ date: txn.date, particular: `તે ${formatForJournal(txn.creditAccount)} ખાતે`, amount: txn.amount, id: txn.id });
+                ledgers[txn.debitAccount].totalDebit += txn.amount;
+
+                if (!ledgers[txn.creditAccount]) ledgers[txn.creditAccount] = { debits: [], credits: [], totalDebit: 0, totalCredit: 0 };
+                ledgers[txn.creditAccount].credits.push({ date: txn.date, particular: `${formatForJournal(txn.debitAccount)} ખાતે ઉ.`, amount: txn.amount, id: txn.id });
+                ledgers[txn.creditAccount].totalCredit += txn.amount;
+                });
+
+                Object.keys(ledgers).forEach(key => {
+                const dr = ledgers[key].totalDebit, cr = ledgers[key].totalCredit;
+                if (dr > cr) { ledgers[key].closingBalance = dr - cr; ledgers[key].balanceType = 'Dr'; } 
+                else if (cr > dr) { ledgers[key].closingBalance = cr - dr; ledgers[key].balanceType = 'Cr'; } 
+                else { ledgers[key].closingBalance = 0; ledgers[key].balanceType = '-'; }
+
+                if (key.includes("સેવીંગ્ઝ")) totalSavings += (ledgers[key].balanceType === 'Dr' ? ledgers[key].closingBalance : -ledgers[key].closingBalance);
+                if (key.includes("FD") && ledgers[key].type === "Asset") totalFD += (ledgers[key].balanceType === 'Dr' ? ledgers[key].closingBalance : -ledgers[key].closingBalance);
+                if (key.includes("Income") || key.includes("આવક")) totalIncome += ledgers[key].closingBalance;
+                });
+
+                return { ledgers, totalSavings, totalFD, totalIncome };
+            }, [transactions, accounts]);
+
+            const exportToExcel = async () => {
+                if (transactions.length === 0) {
+                alert("એક્સેલ ફાઇલ ડાઉનલોડ કરવા માટે કૃપા કરીને પહેલા ઓછામાં ઓછો એક વ્યવહાર (Entry) નોંધો.");
+                return;
+                }
+
+                setIsExporting(true);
+                try {
+                const wb = XLSX.utils.book_new();
+
+                const journalData = [];
+                journalData.push(["આમ નોંધ (F.Y. 2024-25)", "", "", "", ""]);
+                journalData.push(["તારીખ", "વિગત", "ખા.પા.", "ઉધાર (₹)", "જમા (₹)"]);
+
+                transactions.forEach(txn => {
+                    const drName = formatForJournal(txn.debitAccount);
+                    const crName = formatForJournal(txn.creditAccount);
+                    const formattedDateForExcel = txn.date.split('-').reverse().join('-'); 
+                    
+                    journalData.push([formattedDateForExcel, `${drName} ખાતે ઉ.`, "", txn.amount, ""]);
+                    journalData.push(["", `તે ${crName} ખાતે`, "", "", txn.amount]);
+                    journalData.push(["", txn.narration, "", "", ""]);
+                });
+
+                const wsJournal = XLSX.utils.aoa_to_sheet(journalData);
+                wsJournal['!cols'] = [{ wch: 12 }, { wch: 50 }, { wch: 8 }, { wch: 12 }, { wch: 12 }];
+                XLSX.utils.book_append_sheet(wb, wsJournal, "આમ નોંધ");
+
+                const ledgerData = [];
+                Object.entries(financialData.ledgers).forEach(([accName, data]) => {
+                    if (data.debits.length === 0 && data.credits.length === 0) return;
+                    ledgerData.push([accName, "", "", "", "", ""]);
+                    ledgerData.push(["તારીખ", "વિગત (જમા)", "જમા રૂપિયા", "ઉધાર તારીખ", "વિગત (ઉધાર)", "ઉધાર રૂપિયા"]);
+
+                    const maxRows = Math.max(data.credits.length, data.debits.length);
+                    let totalCr = 0, totalDr = 0;
+
+                    for (let i = 0; i < maxRows; i++) {
+                    const cr = data.credits[i], dr = data.debits[i];
+                    if(cr) totalCr += cr.amount;
+                    if(dr) totalDr += dr.amount;
+                    
+                    const crDate = cr ? cr.date.split('-').reverse().join('-') : "";
+                    const drDate = dr ? dr.date.split('-').reverse().join('-') : "";
+
+                    ledgerData.push([crDate, cr ? cr.particular : "", cr ? cr.amount : "", drDate, dr ? dr.particular : "", dr ? dr.amount : ""]);
+                    }
+                    ledgerData.push(["", "કુલ જમા", totalCr, "", "કુલ ઉધાર", totalDr]);
+                    
+                    let closingTextDr = "", closingAmtDr = "", closingTextCr = "", closingAmtCr = "";
+                    if (data.balanceType === 'Dr') { closingTextCr = "બાકી આગળ લઈ ગયા (ઉધાર બાકી)"; closingAmtCr = data.closingBalance; } 
+                    else if (data.balanceType === 'Cr') { closingTextDr = "બાકી આગળ લઈ ગયા (જમા બાકી)"; closingAmtCr = data.closingBalance; }
+                    ledgerData.push(["", closingTextCr, closingAmtCr, "", closingTextDr, closingAmtCr]);
+                    ledgerData.push(["", "", "", "", "", ""]); ledgerData.push(["", "", "", "", "", ""]);
+                });
+
+                const wsLedger = XLSX.utils.aoa_to_sheet(ledgerData);
+                wsLedger['!cols'] = [{ wch: 12 }, { wch: 30 }, { wch: 12 }, { wch: 12 }, { wch: 30 }, { wch: 12 }];
+                XLSX.utils.book_append_sheet(wb, wsLedger, "ખાતાવહી");
+
+                XLSX.writeFile(wb, "એકાઉન્ટિંગ_રિપોર્ટ_2024_25.xlsx");
+                setIsExporting(false);
+                } catch (error) {
+                console.error("Export failed:", error);
+                alert("એક્સેલ ફાઇલ બનાવવામાં ભૂલ આવી છે.");
+                setIsExporting(false);
+                }
+            };
+
+            const renderRuleExplanation = () => {
+                if (entryMode === 'expense_payment') {
+                return (
+                    <div className="bg-amber-50/80 border-l-4 border-amber-400 p-4 rounded-xl text-sm font-medium text-slate-700 shadow-sm flex items-start gap-3 mt-4">
+                    <Icons.Info />
+                    <div>
+                        <span className="text-[#1e3a8a] font-bold">નોંધ (માર્ગદર્શન):</span><br/>
+                        • <b>ઉપજ-ખર્ચના નિયમ મુજબ:</b> ખર્ચ કે નુકસાન ઉધાર થાય (તેથી <b>{formData.debitAccount || 'ખર્ચ ખાતું'}</b> ઉધાર થશે).<br/>
+                        • <b>માલ-મિલકતના નિયમ મુજબ:</b> જાય તે જમા થાય (તેથી <b>{formData.creditAccount || 'બેન્ક ખાતું'}</b> જમા થશે).
+                    </div>
+                    </div>
+                );
+                } else if (entryMode === 'income_receipt') {
+                return (
+                    <div className="bg-amber-50/80 border-l-4 border-amber-400 p-4 rounded-xl text-sm font-medium text-slate-700 shadow-sm flex items-start gap-3 mt-4">
+                    <Icons.Info />
+                    <div>
+                        <span className="text-[#1e3a8a] font-bold">નોંધ (માર્ગદર્શન):</span><br/>
+                        • <b>માલ-મિલકતના નિયમ મુજબ:</b> આવે તે ઉધાર થાય (નાણાં આવ્યા તેથી <b>{formData.debitAccount || 'બેન્ક/રોકડ'}</b> ઉધાર થશે).<br/>
+                        • <b>ઉપજ-ખર્ચના નિયમ મુજબ:</b> આવક કે ઉપજ જમા થાય (તેથી <b>{formData.creditAccount || 'આવક ખાતું'}</b> જમા થશે).
+                    </div>
+                    </div>
+                );
+                } else if (entryMode === 'payment_to_person') {
+                return (
+                    <div className="bg-amber-50/80 border-l-4 border-amber-400 p-4 rounded-xl text-sm font-medium text-slate-700 shadow-sm flex items-start gap-3 mt-4">
+                    <Icons.Info />
+                    <div>
+                        <span className="text-[#1e3a8a] font-bold">નોંધ (માર્ગદર્શન):</span><br/>
+                        • <b>વ્યક્તિ ખાતાના નિયમ મુજબ:</b> લેનાર ખાતે ઉધાર કરો (તેથી <b>{formData.debitAccount || 'પાર્ટી/સંસ્થા'}</b> ઉધાર થશે).<br/>
+                        • <b>માલ-મિલકતના નિયમ મુજબ:</b> જાય તે જમા થાય (તેથી <b>{formData.creditAccount || 'બેન્ક/રોકડ'}</b> જમા થશે).
+                    </div>
+                    </div>
+                );
+                } else if (entryMode === 'contra') {
+                return (
+                    <div className="bg-amber-50/80 border-l-4 border-amber-400 p-4 rounded-xl text-sm font-medium text-slate-700 shadow-sm flex items-start gap-3 mt-4">
+                    <Icons.Info />
+                    <div>
+                        <span className="text-[#1e3a8a] font-bold">નોંધ (માર્ગદર્શન):</span><br/>
+                        • <b>માલ-મિલકત ખાતાના નિયમ મુજબ:</b> "આવે તે ઉધાર, જાય તે જમા." <b>{formData.debitAccount || 'જેમાં રકમ આવી તે ખાતું'}</b> ઉધાર થશે અને <b>{formData.creditAccount || 'જેમાંથી રકમ ગઈ તે ખાતું'}</b> જમા થશે.
+                    </div>
+                    </div>
+                );
+                }
+                return null;
+            };
+
+            return (
+                <div className="min-h-screen text-[#1e293b] selection:bg-blue-200 selection:text-blue-900">
+                
+                <div className="bg-gradient-to-r from-[#0f172a] via-[#1e3a8a] to-[#0f172a] pb-24 pt-8 px-4 sm:px-6 lg:px-8 shadow-xl border-b-[5px] border-amber-400">
+                    <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-gradient-to-br from-yellow-300 via-amber-400 to-yellow-600 p-3.5 rounded-2xl shadow-lg shadow-amber-500/20">
+                        <Icons.Landmark />
+                        </div>
+                        <div>
+                        <h1 className="text-2xl md:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-amber-100 tracking-wide drop-shadow-md py-2 leading-relaxed">
+                            ફંડ મેનેજમેન્ટ એન્ડ એકાઉન્ટીંગ સિસ્ટમ
+                        </h1>
+                        <p className="text-amber-200/90 text-sm font-bold tracking-wider flex items-center gap-1.5 -mt-1">
+                            <Icons.Sparkles /> Powered by MARK's Financial Co-operation Co.
+                        </p>
+                        </div>
+                    </div>
+                    
+                    <button 
+                        onClick={exportToExcel}
+                        className={`group relative overflow-hidden flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-black text-[17px] transition-all duration-200 shadow-xl border-2 hover:-translate-y-1 active:scale-95 active:shadow-md
+                        ${isExporting 
+                            ? 'bg-emerald-700 border-emerald-600 text-white cursor-wait' 
+                            : 'bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 hover:from-emerald-600 hover:via-green-500 hover:to-emerald-400 text-white border-emerald-300/60 hover:border-white shadow-emerald-700/40'
+                        }`}
+                    >
+                        {isExporting ? <span className="animate-spin text-emerald-100">↻</span> : <Icons.FileSpreadsheet /> }
+                        <span className="relative z-10 drop-shadow-md tracking-wide">
+                        {isExporting ? 'Generating...' : 'Export to Excel'}
+                        </span>
+                        <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                    </button>
+                    </div>
+                </div>
+
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10 pb-12">
+                    
+                    <div className="flex space-x-2 mb-8 bg-white/90 backdrop-blur-lg p-2 rounded-3xl shadow-xl overflow-x-auto custom-scrollbar border border-white">
+                    {[
+                        { id: 'dashboard', icon: <Icons.LayoutDashboard />, label: 'ડેશબોર્ડ' },
+                        { id: 'entry', icon: <Icons.PlusCircle />, label: 'સ્માર્ટ એન્ટ્રી' },
+                        { id: 'journal', icon: <Icons.FileText />, label: 'આમનોંધ પત્રક' },
+                        { id: 'ledger', icon: <Icons.Book />, label: 'ખાતાવહી' },
+                        { id: 'trialbalance', icon: <Icons.FileSpreadsheet />, label: 'કાચું સરવૈયું' }
+                    ].map(tab => (
+                        <button key={tab.id} onClick={() => setActiveTab(tab.id)}
+                        className={`flex items-center gap-2 px-6 py-3 rounded-2xl font-bold transition-all duration-300 whitespace-nowrap active:scale-95 ${
+                            activeTab === tab.id 
+                            ? 'bg-[#1e3a8a] text-amber-50 shadow-md shadow-blue-900/20 scale-100 border border-[#1e3a8a]' 
+                            : 'text-slate-500 hover:bg-amber-50 hover:text-amber-700'
+                        }`}
+                        >
+                        {tab.icon} {tab.label}
+                        </button>
+                    ))}
+                    </div>
+
+                    {activeTab === 'dashboard' && (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+                        <div className="bg-white rounded-3xl p-7 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-blue-200 transition-colors">
+                            <div className="absolute -right-6 -top-6 bg-blue-50 w-32 h-32 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700 ease-in-out"></div>
+                            <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="bg-gradient-to-br from-blue-100 to-blue-200 p-3 rounded-2xl text-blue-700 border border-blue-200"><Icons.Wallet /></div>
+                                <span className="bg-emerald-50 text-emerald-600 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-emerald-200">સક્રિય</span>
+                            </div>
+                            <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">વાપરી શકાય તેવું ફંડ</p>
+                            <h3 className="text-3xl lg:text-4xl font-black text-[#0f172a] tracking-tight">{formatCurrency(financialData.totalSavings)}</h3>
+                            <p className="text-sm font-medium text-slate-400 mt-3">SBI સેવીંગ્ઝ બેન્ક ખાતાની સિલક</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-3xl p-7 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-purple-200 transition-colors">
+                            <div className="absolute -right-6 -top-6 bg-purple-50 w-32 h-32 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700 ease-in-out"></div>
+                            <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="bg-gradient-to-br from-purple-100 to-purple-200 p-3 rounded-2xl text-purple-700 border border-purple-200"><Icons.Landmark /></div>
+                                <span className="bg-amber-50 text-amber-600 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-amber-200">નિશ્ચિત</span>
+                            </div>
+                            <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">રોકાયેલું ફંડ</p>
+                            <h3 className="text-3xl lg:text-4xl font-black text-[#0f172a] tracking-tight">{formatCurrency(financialData.totalFD)}</h3>
+                            <p className="text-sm font-medium text-slate-400 mt-3">ફિક્સ ડિપોઝીટ (FD) ની સિલક</p>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-3xl p-7 shadow-xl shadow-slate-200/50 border border-slate-100 relative overflow-hidden group hover:border-emerald-200 transition-colors">
+                            <div className="absolute -right-6 -top-6 bg-emerald-50 w-32 h-32 rounded-full opacity-50 group-hover:scale-150 transition-transform duration-700 ease-in-out"></div>
+                            <div className="relative z-10">
+                            <div className="flex justify-between items-start mb-4">
+                                <div className="bg-gradient-to-br from-emerald-100 to-emerald-200 p-3 rounded-2xl text-emerald-700 border border-emerald-200"><Icons.TrendingUp /></div>
+                                <span className="bg-blue-50 text-blue-600 text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest border border-blue-200">વૃદ્ધિ</span>
+                            </div>
+                            <p className="text-slate-500 text-sm font-bold uppercase tracking-wider mb-1">કુલ આવક / વ્યાજ</p>
+                            <h3 className="text-3xl lg:text-4xl font-black text-[#0f172a] tracking-tight">{formatCurrency(financialData.totalIncome)}</h3>
+                            <p className="text-sm font-medium text-slate-400 mt-3">વ્યાજ અને અન્ય આવક</p>
+                            </div>
+                        </div>
+                        </div>
+                        
+                        <div className="bg-white p-8 rounded-3xl shadow-lg border border-slate-100 border-t-[4px] border-t-[#1e3a8a] mt-6 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-amber-50 rounded-full opacity-50 -translate-y-1/2 translate-x-1/4"></div>
+                        <h3 className="text-xl font-extrabold text-[#1e3a8a] mb-6 flex items-center gap-3 relative z-10">
+                            <span className="text-amber-500"><Icons.BookOpen /></span> નામાના ૩ સુવર્ણ નિયમો (Golden Rules)
+                        </h3>
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 relative z-10">
+                            <div className="p-6 rounded-2xl bg-gradient-to-b from-purple-50/50 to-white border border-purple-100 shadow-sm hover:shadow-md transition-all">
+                            <div className="flex items-center gap-2 mb-3 text-purple-700 font-black text-lg">
+                                <span className="text-purple-500"><Icons.Users /></span> વ્યક્તિ ખાતાનો નિયમ
+                            </div>
+                            <div className="text-[15px] text-slate-700 font-bold leading-relaxed space-y-1">
+                                <p>• લેનાર ખાતે <span className="text-rose-600">ઉધાર</span> કરો.</p>
+                                <p>• આપનાર ખાતે <span className="text-emerald-600">જમા</span> કરો.</p>
+                            </div>
+                            </div>
+
+                            <div className="p-6 rounded-2xl bg-gradient-to-b from-blue-50/50 to-white border border-blue-100 shadow-sm hover:shadow-md transition-all">
+                            <div className="flex items-center gap-2 mb-3 text-blue-700 font-black text-lg">
+                                <span className="text-blue-500"><Icons.Landmark /></span> માલ-મિલકતનો નિયમ
+                            </div>
+                            <div className="text-[15px] text-slate-700 font-bold leading-relaxed space-y-1">
+                                <p>• મિલકત/રોકડ આવે તો <span className="text-rose-600">ઉધાર</span> કરો.</p>
+                                <p>• મિલકત/રોકડ જાય તો <span className="text-emerald-600">જમા</span> કરો.</p>
+                            </div>
+                            </div>
+
+                            <div className="p-6 rounded-2xl bg-gradient-to-b from-rose-50/50 to-white border border-rose-100 shadow-sm hover:shadow-md transition-all">
+                            <div className="flex items-center gap-2 mb-3 text-rose-700 font-black text-lg">
+                                <span className="text-rose-500"><Icons.TrendingDown /></span> ઉપજ-ખર્ચનો નિયમ
+                            </div>
+                            <div className="text-[15px] text-slate-700 font-bold leading-relaxed space-y-1">
+                                <p>• ખર્ચ કે નુકસાન ખાતે <span className="text-rose-600">ઉધાર</span> કરો.</p>
+                                <p>• આવક કે ઉપજ ખાતે <span className="text-emerald-600">જમા</span> કરો.</p>
+                            </div>
+                            </div>
+                        </div>
+                        </div>
+                    </div>
+                    )}
+
+                    {activeTab === 'entry' && (
+                    <div className="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="xl:col-span-2 bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-8 border border-slate-100">
+                        <div className="mb-6">
+                            <label className="block text-sm font-bold text-slate-700 mb-3">તમે કયા પ્રકારનો વ્યવહાર નોંધવા માંગો છો?</label>
+                            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                            <button onClick={() => setEntryMode('expense_payment')} className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-1 active:scale-95 ${entryMode === 'expense_payment' ? 'bg-rose-50 border-rose-500 text-rose-700 shadow-sm' : 'border-slate-200 hover:bg-slate-50'}`}>
+                                <span className={entryMode === 'expense_payment' ? 'text-rose-500' : 'text-slate-400'}><Icons.TrendingDown /></span>
+                                <span className="text-xs font-bold text-center">ખર્ચ ચૂકવ્યો</span>
+                            </button>
+                            <button onClick={() => setEntryMode('payment_to_person')} className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-1 active:scale-95 ${entryMode === 'payment_to_person' ? 'bg-purple-50 border-purple-500 text-purple-700 shadow-sm' : 'border-slate-200 hover:bg-slate-50'}`}>
+                                <span className={entryMode === 'payment_to_person' ? 'text-purple-500' : 'text-slate-400'}><Icons.Users /></span>
+                                <span className="text-xs font-bold text-center">પાર્ટીને ચૂકવ્યા</span>
+                            </button>
+                            <button onClick={() => setEntryMode('income_receipt')} className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-1 active:scale-95 ${entryMode === 'income_receipt' ? 'bg-emerald-50 border-emerald-500 text-emerald-700 shadow-sm' : 'border-slate-200 hover:bg-slate-50'}`}>
+                                <span className={entryMode === 'income_receipt' ? 'text-emerald-500' : 'text-slate-400'}><Icons.TrendingUp /></span>
+                                <span className="text-xs font-bold text-center">આવક મળ્યું</span>
+                            </button>
+                            <button onClick={() => setEntryMode('contra')} className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-1 active:scale-95 ${entryMode === 'contra' ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-sm' : 'border-slate-200 hover:bg-slate-50'}`}>
+                                <span className={entryMode === 'contra' ? 'text-blue-500' : 'text-slate-400'}><Icons.ArrowRightLeft /></span>
+                                <span className="text-xs font-bold text-center">બેન્ક (Contra)</span>
+                            </button>
+                            <button onClick={() => setEntryMode('manual')} className={`p-4 rounded-xl border flex flex-col items-center gap-2 transition-all duration-200 hover:-translate-y-1 active:scale-95 ${entryMode === 'manual' ? 'bg-[#1e3a8a] border-[#1e3a8a] text-amber-400 shadow-sm' : 'border-slate-200 hover:bg-slate-50'}`}>
+                                <span className={entryMode === 'manual' ? 'text-amber-400' : 'text-slate-400'}><Icons.FileText /></span>
+                                <span className="text-xs font-bold text-center">મેન્યુઅલ એન્ટ્રી</span>
+                            </button>
+                            </div>
+                        </div>
+
+                        <form onSubmit={handleAddTransaction} className="space-y-5">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">તારીખ (DD-MM-YYYY)</label>
+                                <input type="date" required className="w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all text-slate-700 font-bold" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">રકમ (₹)</label>
+                                <input type="number" required min="0.01" step="0.01" placeholder="૦.૦૦" className="w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 font-black text-xl text-emerald-700 outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all" value={formData.amount} onChange={e => setFormData({...formData, amount: e.target.value})} />
+                            </div>
+                            </div>
+
+                            <div className="p-5 bg-slate-50 rounded-2xl border border-slate-200 shadow-inner">
+                            <div className="space-y-4">
+                                {entryMode === 'expense_payment' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div><label className="block text-sm font-bold text-rose-700 mb-1">કયો ખર્ચ કર્યો? (ઉધાર)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-rose-400 bg-white shadow-sm font-bold text-slate-700" value={formData.debitAccount} onChange={e => setFormData({...formData, debitAccount: e.target.value})}><option value="">-- ખર્ચ પસંદ કરો --</option>{accounts.filter(a => a.type === 'Expense').map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                    <div><label className="block text-sm font-bold text-blue-700 mb-1">શેમાંથી ચૂકવણી કરી? (જમા)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-blue-400 bg-white shadow-sm font-bold text-slate-700" value={formData.creditAccount} onChange={e => setFormData({...formData, creditAccount: e.target.value})}><option value="">-- બેન્ક/રોકડ પસંદ કરો --</option>{accounts.filter(a => a.category === 'Real').map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                </div>
+                                )}
+
+                                {entryMode === 'income_receipt' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div><label className="block text-sm font-bold text-blue-700 mb-1">નાણાં શેમાં મળ્યા? દા.ત. સેવિંગ્સ (ઉધાર)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-blue-400 bg-white shadow-sm font-bold text-slate-700" value={formData.debitAccount} onChange={e => setFormData({...formData, debitAccount: e.target.value})}><option value="">-- બેન્ક/રોકડ પસંદ કરો --</option>{accounts.filter(a => a.category === 'Real').map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                    <div><label className="block text-sm font-bold text-emerald-700 mb-1">કઈ આવક મળી? દા.ત. વ્યાજ (જમા)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-emerald-400 bg-white shadow-sm font-bold text-slate-700" value={formData.creditAccount} onChange={e => setFormData({...formData, creditAccount: e.target.value})}><option value="">-- આવક પસંદ કરો --</option>{accounts.filter(a => a.type === 'Income').map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                </div>
+                                )}
+
+                                {entryMode === 'contra' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div><label className="block text-sm font-bold text-slate-700 mb-1">કયા ખાતામાં રકમ આવી? (ઉધાર)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-blue-400 bg-white shadow-sm font-bold text-slate-700" value={formData.debitAccount} onChange={e => setFormData({...formData, debitAccount: e.target.value})}><option value="">-- બેન્ક/FD/રોકડ પસંદ કરો --</option>{accounts.filter(a => a.category === 'Real').map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                    <div><label className="block text-sm font-bold text-slate-700 mb-1">કયા ખાતામાંથી ગઈ? (જમા)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-blue-400 bg-white shadow-sm font-bold text-slate-700" value={formData.creditAccount} onChange={e => setFormData({...formData, creditAccount: e.target.value})}><option value="">-- બેન્ક/FD/રોકડ પસંદ કરો --</option>{accounts.filter(a => a.category === 'Real').map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                </div>
+                                )}
+
+                                {entryMode === 'payment_to_person' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div><label className="block text-sm font-bold text-purple-700 mb-1">કોને ચૂકવ્યા? (ઉધાર)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-purple-400 bg-white shadow-sm font-bold text-slate-700" value={formData.debitAccount} onChange={e => setFormData({...formData, debitAccount: e.target.value})}><option value="">-- પાર્ટી પસંદ કરો --</option>{accounts.filter(a => a.category === 'Personal').map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                    <div><label className="block text-sm font-bold text-blue-700 mb-1">શેમાંથી ચૂકવ્યા? (જમા)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-blue-400 bg-white shadow-sm font-bold text-slate-700" value={formData.creditAccount} onChange={e => setFormData({...formData, creditAccount: e.target.value})}><option value="">-- બેન્ક પસંદ કરો --</option>{accounts.filter(a => a.category === 'Real').map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                </div>
+                                )}
+
+                                {entryMode === 'manual' && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                    <div><label className="block text-sm font-bold text-[#1e3a8a] mb-1">ઉધાર થનાર ખાતું (Dr.)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-indigo-400 bg-white shadow-sm font-bold text-slate-700" value={formData.debitAccount} onChange={e => setFormData({...formData, debitAccount: e.target.value})}><option value="">-- પસંદ કરો --</option>{accounts.map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                    <div><label className="block text-sm font-bold text-rose-700 mb-1">જમા થનાર ખાતું (Cr.)</label><select required className="w-full border-2 border-slate-200 rounded-xl p-3 outline-none focus:border-rose-400 bg-white shadow-sm font-bold text-slate-700" value={formData.creditAccount} onChange={e => setFormData({...formData, creditAccount: e.target.value})}><option value="">-- પસંદ કરો --</option>{accounts.map(acc => <option key={acc.name} value={acc.name}>{acc.name}</option>)}</select></div>
+                                </div>
+                                )}
+                            </div>
+                            
+                            {renderRuleExplanation()}
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">ચેક નં. / રેફરન્સ નં.</label>
+                                <input type="text" className="w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all font-bold text-slate-700" value={formData.checkNo} onChange={e => setFormData({...formData, checkNo: e.target.value})} />
+                            </div>
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-semibold text-slate-700 mb-1">બાબત જે (Narration)</label>
+                                <textarea rows="2" placeholder="ખાલી રાખશો તો આપમેળે બની જશે..." className="w-full border-2 border-slate-200 rounded-xl p-3 bg-slate-50 text-sm outline-none focus:bg-white focus:border-emerald-400 focus:ring-4 focus:ring-emerald-50 transition-all font-medium text-slate-700" value={formData.narration} onChange={e => setFormData({...formData, narration: e.target.value})}></textarea>
+                            </div>
+                            </div>
+
+                            {/* Submit Transaction Premium Green Button */}
+                            <button type="submit" className="group relative overflow-hidden w-full flex justify-center items-center gap-3 bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-500 hover:from-emerald-600 hover:via-green-500 hover:to-emerald-400 text-white font-black text-[19px] py-4 rounded-2xl shadow-xl shadow-emerald-700/40 transition-all duration-200 border-2 border-emerald-300/60 hover:border-white mt-3 hover:-translate-y-1 active:scale-95 active:shadow-md">
+                            <span className="relative z-10 text-emerald-50 drop-shadow-md group-hover:scale-110 transition-transform"><Icons.CheckCircle2 /></span>
+                            <span className="relative z-10 drop-shadow-md tracking-wide">વ્યવહાર નોંધો</span>
+                            <div className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/30 to-transparent group-hover:animate-[shimmer_1.5s_infinite]"></div>
+                            </button>
+                        </form>
+                        </div>
+
+                        <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 p-8 border border-slate-100 h-max sticky top-6">
+                        <h2 className="text-xl font-extrabold text-[#1e3a8a] border-b-2 border-amber-100 pb-4 mb-6">નવું ખાતું બનાવો</h2>
+                        <div className="space-y-4 mb-6">
+                            <input type="text" placeholder="ખાતાનું નામ..." className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 outline-none focus:border-amber-400 focus:bg-amber-50/30 transition-colors" value={newAccountName} onChange={e => setNewAccountName(e.target.value)} />
+                            <select className="w-full border-2 border-slate-200 rounded-xl p-3 text-sm font-bold text-slate-700 bg-slate-50 outline-none focus:border-amber-400 focus:bg-amber-50/30 transition-colors" value={newAccountType} onChange={e => setNewAccountType(e.target.value)}>
+                                <optgroup label="માલ-મિલકત (Real)"><option value="Asset">મિલકત / બેન્ક / રોકડ / FD</option></optgroup>
+                                <optgroup label="ઉપજ-ખર્ચ (Nominal)"><option value="Expense">ખર્ચ ખાતું</option><option value="Income">આવક ખાતું</option></optgroup>
+                                <optgroup label="વ્યક્તિ ખાતા (Personal)"><option value="Personal_Debtor">વ્યક્તિ/દેવાદાર</option><option value="Personal_Creditor">વ્યક્તિ/લેણદાર</option></optgroup>
+                            </select>
+                            <button onClick={handleAddAccount} className="w-full bg-slate-800 hover:bg-[#1e3a8a] text-amber-50 p-3.5 rounded-xl text-sm font-black tracking-wider uppercase transition-all duration-200 shadow-md border border-transparent hover:border-amber-400/50 active:scale-95">ઉમેરો</button>
+                        </div>
+                        </div>
+                    </div>
+                    )}
+
+                    {activeTab === 'journal' && (
+                    <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="p-6 md:p-8 border-b-2 border-amber-100 bg-gradient-to-r from-slate-50 to-white flex flex-col md:flex-row justify-between items-center gap-4">
+                        <h2 className="text-2xl font-black text-[#1e3a8a] tracking-tight">આમનોંધ પત્રક (Journal)</h2>
+                        <span className="text-sm bg-[#1e3a8a] text-amber-400 border border-amber-400/30 px-5 py-2 rounded-full font-bold shadow-md">
+                            કુલ નોંધ: <span className="text-white ml-1">{toGujaratiDigits(transactions.length)}</span>
+                        </span>
+                        </div>
+                        <div className="overflow-x-auto">
+                        <table className="w-full text-left border-collapse min-w-[800px]">
+                            <thead>
+                            <tr className="bg-slate-50 border-y-2 border-slate-200">
+                                <th className="p-5 w-32 font-black text-sm lg:text-base uppercase tracking-widest text-slate-600 text-center border-r border-slate-200/50">તારીખ</th>
+                                <th className="p-5 font-black text-sm lg:text-base uppercase tracking-widest text-slate-600 border-r border-slate-200/50">વિગત</th>
+                                <th className="p-5 w-24 font-black text-sm lg:text-base uppercase tracking-widest text-slate-600 text-center border-r border-slate-200/50">ખા.પા.</th>
+                                <th className="p-5 w-40 font-black text-sm lg:text-base uppercase tracking-widest text-slate-600 text-right border-r border-slate-200/50">ઉધાર (₹)</th>
+                                <th className="p-5 w-40 font-black text-sm lg:text-base uppercase tracking-widest text-slate-600 text-right">જમા (₹)</th>
+                                <th className="p-5 w-20 text-center"></th>
+                            </tr>
+                            </thead>
+                            <tbody className="text-slate-700 bg-white">
+                            {transactions.map((txn, index) => (
+                                <React.Fragment key={txn.id}>
+                                <tr className="group hover:bg-amber-50/30 transition-colors">
+                                    <td className="p-5 align-top font-bold text-base text-slate-500 text-center border-t border-r border-slate-100" rowSpan={3}>{formatDate(txn.date)}</td>
+                                    <td className="p-3 px-5 font-black text-[#1e3a8a] text-lg border-t border-r border-slate-100">{formatForJournal(txn.debitAccount)} ખાતે ઉધાર</td>
+                                    <td className="p-3 px-5 text-center text-slate-300 border-t border-r border-slate-100">-</td>
+                                    <td className="p-3 px-5 text-right font-black text-xl text-[#1e3a8a] border-t border-r border-slate-100">{formatCurrency(txn.amount)}</td>
+                                    <td className="p-3 px-5 text-right border-t border-slate-100"></td>
+                                    <td className="p-5 text-center align-top border-t border-slate-100" rowSpan={3}>
+                                    <button onClick={() => deleteTransaction(txn.id)} className="text-rose-400 hover:text-white hover:bg-rose-500 p-2.5 rounded-xl transition-all font-bold text-xs opacity-0 group-hover:opacity-100 shadow-sm border border-transparent hover:border-rose-600">
+                                        રદ કરો
+                                    </button>
+                                    </td>
+                                </tr>
+                                <tr className="group-hover:bg-amber-50/30 transition-colors">
+                                    <td className="p-3 px-5 pl-14 font-bold text-slate-600 text-lg border-r border-slate-100">તે {formatForJournal(txn.creditAccount)} ખાતે</td>
+                                    <td className="p-3 px-5 text-center text-slate-300 border-r border-slate-100">-</td>
+                                    <td className="p-3 px-5 text-right border-r border-slate-100"></td>
+                                    <td className="p-3 px-5 text-right font-black text-xl text-slate-700">{formatCurrency(txn.amount)}</td>
+                                </tr>
+                                <tr className="border-b-[6px] border-slate-50 group-hover:bg-amber-50/30 transition-colors">
+                                    <td className="p-4 px-5 italic text-[15px] text-slate-500 font-medium bg-slate-50/50 border-r border-slate-100" colSpan={4}>
+                                    {txn.narration}
+                                    </td>
+                                </tr>
+                                </React.Fragment>
+                            ))}
+                            {transactions.length === 0 && (
+                                <tr><td colSpan={6} className="p-16 text-center text-slate-400 font-bold text-xl">કોઈ વ્યવહાર નોંધાયેલ નથી.</td></tr>
+                            )}
+                            </tbody>
+                        </table>
+                        </div>
+                    </div>
+                    )}
+
+                    {activeTab === 'ledger' && (
+                    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {Object.entries(financialData.ledgers).map(([accName, data]) => {
+                            if (data.debits.length === 0 && data.credits.length === 0) return null;
+                            return (
+                            <div key={accName} className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100">
+                                <div className="bg-gradient-to-r from-[#0f172a] to-[#1e3a8a] p-5 text-center text-amber-400 relative border-b-[3px] border-amber-400">
+                                <h3 className="text-2xl font-black tracking-wide drop-shadow-md">{accName}</h3>
+                                </div>
+                                
+                                <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse min-w-[800px]">
+                                    <thead>
+                                    <tr className="bg-slate-50 text-slate-700 text-[15px] font-black border-b-2 border-slate-200">
+                                        <th className="p-4 text-center border-r border-slate-200 w-32 uppercase tracking-widest">તારીખ</th>
+                                        <th className="p-4 border-r border-slate-200 uppercase tracking-widest">વિગત (જમા)</th>
+                                        <th className="p-4 text-right border-r-4 border-slate-300 w-36 uppercase tracking-widest">જમા (₹)</th>
+                                        <th className="p-4 text-center border-r border-slate-200 w-32 uppercase tracking-widest">તારીખ</th>
+                                        <th className="p-4 border-r border-slate-200 uppercase tracking-widest">વિગત (ઉધાર)</th>
+                                        <th className="p-4 text-right w-36 uppercase tracking-widest">ઉધાર (₹)</th>
+                                    </tr>
+                                    </thead>
+                                    <tbody className="bg-white text-[15px] font-bold text-slate-600">
+                                    {Array.from({ length: Math.max(data.credits.length, data.debits.length) }).map((_, i) => {
+                                        const cr = data.credits[i];
+                                        const dr = data.debits[i];
+                                        return (
+                                        <tr key={i} className="border-b border-slate-100 hover:bg-amber-50/40">
+                                            <td className="p-3 text-center border-r border-slate-100 text-slate-500">{cr ? formatDate(cr.date) : ""}</td>
+                                            <td className="p-3 border-r border-slate-100 text-[#1e3a8a]">{cr ? cr.particular : ""}</td>
+                                            <td className="p-3 text-right font-black text-rose-600 border-r-4 border-slate-200">{cr ? formatCurrency(cr.amount) : ""}</td>
+                                            
+                                            <td className="p-3 text-center border-r border-slate-100 text-slate-500">{dr ? formatDate(dr.date) : ""}</td>
+                                            <td className="p-3 border-r border-slate-100 text-[#1e3a8a]">{dr ? dr.particular : ""}</td>
+                                            <td className="p-3 text-right font-black text-indigo-600">{dr ? formatCurrency(dr.amount) : ""}</td>
+                                        </tr>
+                                        );
+                                    })}
+                                    </tbody>
+                                    <tfoot className="bg-slate-50">
+                                    <tr className="border-t-2 border-slate-200">
+                                        <td colSpan={2} className="p-4 text-right font-black text-slate-800 border-r border-slate-200">કુલ જમા:</td>
+                                        <td className="p-4 text-right font-black text-xl text-rose-700 border-r-4 border-slate-200">{formatCurrency(data.totalCredit)}</td>
+                                        <td colSpan={2} className="p-4 text-right font-black text-slate-800 border-r border-slate-200">કુલ ઉધાર:</td>
+                                        <td className="p-4 text-right font-black text-xl text-indigo-700">{formatCurrency(data.totalDebit)}</td>
+                                    </tr>
+                                    {data.closingBalance > 0 && (
+                                        <tr className="bg-amber-50/50 border-t border-slate-200">
+                                        <td colSpan={3} className="p-4 text-right font-black text-[#1e3a8a] border-r-4 border-slate-200">
+                                            {data.balanceType === 'Dr' ? 'બાકી આગળ લઈ ગયા (ઉધાર બાકી)' : ''}
+                                            {data.balanceType === 'Dr' && <span className="ml-4 text-xl text-indigo-700">{formatCurrency(data.closingBalance)}</span>}
+                                        </td>
+                                        <td colSpan={3} className="p-4 text-right font-black text-[#1e3a8a]">
+                                            {data.balanceType === 'Cr' ? 'બાકી આગળ લઈ ગયા (જમા બાકી)' : ''}
+                                            {data.balanceType === 'Cr' && <span className="ml-4 text-xl text-rose-700">{formatCurrency(data.closingBalance)}</span>}
+                                        </td>
+                                        </tr>
+                                    )}
+                                    </tfoot>
+                                </table>
+                                </div>
+                            </div>
+                            );
+                        })}
+                        {Object.keys(financialData.ledgers).every(key => financialData.ledgers[key].debits.length === 0 && financialData.ledgers[key].credits.length === 0) && (
+                            <div className="bg-white p-16 text-center rounded-3xl border border-slate-200 shadow-sm text-slate-400 font-bold text-xl">
+                            ખાતાવહી ખાલી છે. વ્યવહારો નોંધો.
+                            </div>
+                        )}
+                    </div>
+                    )}
+
+                    {activeTab === 'trialbalance' && (
+                    <div className="bg-white rounded-3xl shadow-xl shadow-slate-200/50 overflow-hidden border border-slate-100 max-w-5xl mx-auto animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        <div className="bg-gradient-to-r from-[#0f172a] to-[#1e3a8a] p-8 text-center text-amber-400 relative overflow-hidden border-b-4 border-amber-400">
+                            <h2 className="text-3xl font-black tracking-tight mb-2 drop-shadow-md">કાચું સરવૈયું (Trial Balance)</h2>
+                            <p className="text-amber-100/80 font-bold tracking-widest uppercase text-xs">Financial Year Summary</p>
+                        </div>
+                        <table className="w-full text-left border-collapse">
+                        <thead>
+                            <tr className="bg-slate-50 text-slate-600 text-sm font-black uppercase tracking-widest border-b-2 border-slate-200">
+                            <th className="p-5 px-8">ખાતાનું નામ</th>
+                            <th className="p-5 px-8 text-right w-48 border-l border-slate-200">ઉધાર બાકી (Dr.)</th>
+                            <th className="p-5 px-8 text-right w-48 border-l border-slate-200">જમા બાકી (Cr.)</th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-100 bg-white">
+                            {Object.entries(financialData.ledgers).map(([name, data]) => {
+                            if (data.closingBalance === 0) return null;
+                            return (
+                                <tr key={name} className="hover:bg-amber-50/50 transition-colors">
+                                <td className="p-4 px-8 font-black text-slate-700 text-[17px]">{name}</td>
+                                <td className="p-4 px-8 text-right text-indigo-600 font-black text-xl border-l border-slate-100/50">{data.balanceType === 'Dr' ? formatCurrency(data.closingBalance) : '-'}</td>
+                                <td className="p-4 px-8 text-right text-rose-600 font-black text-xl border-l border-slate-100/50">{data.balanceType === 'Cr' ? formatCurrency(data.closingBalance) : '-'}</td>
+                                </tr>
+                            );
+                            })}
+                        </tbody>
+                        <tfoot className="bg-slate-50">
+                            {(() => {
+                                let tDr = 0, tCr = 0;
+                                Object.values(financialData.ledgers).forEach(d => { if(d.balanceType==='Dr') tDr+=d.closingBalance; if(d.balanceType==='Cr') tCr+=d.closingBalance; });
+                                const match = Math.abs(tDr - tCr) < 0.01;
+                                return (
+                                <tr>
+                                    <td className="p-6 px-8 text-right font-black text-[#1e3a8a] uppercase tracking-wider text-base">કુલ સરવાળો :</td>
+                                    <td className={`p-6 px-8 text-right font-black text-2xl border-t-4 border-l ${match ? 'border-t-emerald-500 text-emerald-600' : 'border-t-rose-500 text-rose-600'} border-l-slate-200`}>{formatCurrency(tDr)}</td>
+                                    <td className={`p-6 px-8 text-right font-black text-2xl border-t-4 border-l ${match ? 'border-t-emerald-500 text-emerald-600' : 'border-t-rose-500 text-rose-600'} border-l-slate-200`}>{formatCurrency(tCr)}</td>
+                                </tr>
+                                )
+                            })()}
+                        </tfoot>
+                        </table>
+                    </div>
+                    )}
+
+                </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
